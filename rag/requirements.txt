@@ -4,6 +4,7 @@ langchain-community==0.0.36
 langchain-google-genai==0.0.8
 sentence-transformers==2.2.2
 transformers==4.40.1
-torch==2.0.1
+torch==2.7.1
 faiss-cpu==1.7.4
 google-api-python-client==2.127.0
+python-3.10
