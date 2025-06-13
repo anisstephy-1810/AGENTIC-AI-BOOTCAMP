@@ -8,6 +8,8 @@ from langchain.prompts import ChatPromptTemplate
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
 import tempfile
+import shutil
+import os
 
 # --- Hardcoded Google API Key (for testing only) ---
 GOOGLE_API_KEY = "AIzaSyDnH78k_Sj1y0fziRvS6VKkYe8u0lGsLyw"
@@ -29,7 +31,7 @@ query = st.text_input("Ask a question about your document:")
 
 # Process only if file and query exist
 if uploaded_file and query:
-    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
         tmp_file.write(uploaded_file.read())
         tmp_path = tmp_file.name
 
@@ -41,9 +43,12 @@ if uploaded_file and query:
     text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     chunks = text_splitter.split_documents(documents)
 
-    # Step 3: Embeddings + FAISS vector store
+    # Step 3: Embeddings + Chroma vector store (in-memory)
     embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-    vectorstore = FAISS.from_documents(chunks, embeddings)
+
+    # Optional: create a temporary persist directory for Chroma
+    chroma_dir = tempfile.mkdtemp()
+    vectorstore = Chroma.from_documents(chunks, embedding=embeddings, persist_directory=chroma_dir)
 
     # Step 4: Gemini LLM setup
     llm = ChatGoogleGenerativeAI(
@@ -52,7 +57,7 @@ if uploaded_file and query:
         temperature=0.7
     )
 
-    # Step 5: Prompt Template (Optional, for chain consistency)
+    # Step 5: Prompt Template
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are a helpful assistant that answers questions about the provided documents."),
         ("human", "{question}")
@@ -74,6 +79,8 @@ if uploaded_file and query:
         st.write(response)
     except Exception as e:
         st.error(f"Error: {e}")
+    finally:
+        shutil.rmtree(chroma_dir)  # Clean up temp Chroma directory
 
 elif uploaded_file:
     st.info("Please enter a question.")
