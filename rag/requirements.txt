@@ -1,10 +1,7 @@
-streamlit==1.33.0
-langchain==0.1.17
-langchain-community==0.0.36
-langchain-google-genai==0.0.8
+streamlit==1.35.0
+langchain==0.2.1
+langchain-google-genai==1.0.1
+chromadb==0.5.0
 sentence-transformers==2.2.2
-transformers==4.40.1
-torch>=2.5.0  # or just torch without a version
-faiss-cpu==1.7.4
-google-api-python-client==2.127.0
-python-3.10
+PyPDF2==3.0.1
+huggingface-hub==0.21.4
