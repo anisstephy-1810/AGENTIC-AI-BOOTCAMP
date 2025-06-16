@@ -1,0 +1,377 @@
+{
+  "name": "GPA",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1320,
+        -420
+      ],
+      "id": "945f6d50-5a98-4c05-85c0-a676a4cbbcdc",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1aSVEpnh0w7th0M56FGOgPbjHYlHRBBHo6h9uzA3H4b8",
+          "mode": "list",
+          "cachedResultName": "Student_Performance_Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aSVEpnh0w7th0M56FGOgPbjHYlHRBBHo6h9uzA3H4b8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aSVEpnh0w7th0M56FGOgPbjHYlHRBBHo6h9uzA3H4b8/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        -1260,
+        -120
+      ],
+      "id": "f42ec3b0-28eb-4b06-bf36-c38487eb491e",
+      "name": "Google Sheets",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3OGuJIGonElYyMD2",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "# Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor item in _input.all():\n  item.json.myNewField = 1\nreturn _input.all()"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1100,
+        -360
+      ],
+      "id": "dd33ed26-2c1c-4046-829e-619218547d39",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=1. Average GPA for each department and semester\n2. Total failure count (GPA < 2.5)\n3. List of at-risk students (Name, GPA, Semester, Department)",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -940,
+        -420
+      ],
+      "id": "c3a0ed33-0850-4fc3-8aea-032e905794f5",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -960,
+        -80
+      ],
+      "id": "8eac907e-8fe0-42f4-a43c-59b5a34e4497",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "aISKIN2D8fhhRnh6",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiAgentData = $input.all().map((item) => item.json);\nconst codeNodeData = $(\"Code\")\n  .all()\n  .map((item) => item.json);\n\nconst mergedData = aiAgentData.map((item, index) => {\n  return { ...item, ...codeNodeData[index] };\n});\n\nreturn mergedData;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -660,
+        -260
+      ],
+      "id": "4f789b60-6392-4c55-ba24-c7d4f48bf66f",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Given these stats: {GPA}, write a summary in 2 sentences showing department performance.{{ $json.GPA }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -520,
+        -420
+      ],
+      "id": "3eb18b21-a9c5-47b5-9d79-1f42cf94d2c9",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -440,
+        -120
+      ],
+      "id": "8dffb0d4-5ff9-4228-b74f-d4169b43872c",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "aISKIN2D8fhhRnh6",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const allData = $(\"Code1\")\n  .all()\n  .map((item) => item.json);\n\n// Filter ECE department data\nconst eceData = allData.filter((data) => data.Department === \"ECE\");\n\n// Calculate average GPA for ECE department\nconst totalGPA = eceData.reduce((total, data) => total + data.GPA, 0);\nconst averageGPA = totalGPA / eceData.length;\n\n// Calculate average GPA for previous semester\nconst prevSemesterData = eceData.filter(\n  (data) => data.Semester === eceData[0].Semester - 1,\n);\nconst totalPrevSemesterGPA = prevSemesterData.reduce(\n  (total, data) => total + data.GPA,\n  0,\n);\nconst averagePrevSemesterGPA = totalPrevSemesterGPA / prevSemesterData.length;\n\n// Calculate percentage drop in GPA\nconst gpaDropPercentage =\n  ((averagePrevSemesterGPA - averageGPA) / averagePrevSemesterGPA) * 100;\n\n// Filter semester 6 MECH data\nconst mechSem6Data = allData.filter(\n  (data) => data.Department === \"MECH\" && data.Semester === 6,\n);\n\n// Calculate number of students at risk\nconst studentsAtRisk = mechSem6Data.filter((data) => data.Grade === \"F\").length;\n\n// Calculate number of students at risk in previous term\nconst prevTermData = mechSem6Data.filter((data) => data.Semester === 5);\nconst prevTermStudentsAtRisk = prevTermData.filter(\n  (data) => data.Grade === \"F\",\n).length;\n\n// Calculate increase in students at risk\nconst studentsAtRiskIncrease = studentsAtRisk - prevTermStudentsAtRisk;\n\nreturn {\n  gpaDropPercentage,\n  studentsAtRiskIncrease,\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -220,
+        -200
+      ],
+      "id": "b603c73f-94cd-406d-9c38-8340677f3cf9",
+      "name": "Code2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.all().map((item) => item.json);\nconst gpaDropPercentage = input[0]?.gpaDropPercentage;\nconst studentsAtRiskIncrease = input[0]?.studentsAtRiskIncrease;\n\nconst message = `Dear ECE department heads, \n\nWe have noticed a ${gpaDropPercentage}% drop in GPA and an increase of ${studentsAtRiskIncrease} students at risk. \n\nWe recommend implementing additional support measures to help these students improve their academic performance.`;\n\nreturn { message };\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -20,
+        -240
+      ],
+      "id": "89415ceb-2573-41a7-9f58-3d68943a43f8",
+      "name": "Code3"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "121U_qJtkRxpIzd-b07rCsZu17WGWg3gLyyInjkyGZl0",
+          "mode": "list",
+          "cachedResultName": "n8nmentor",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/121U_qJtkRxpIzd-b07rCsZu17WGWg3gLyyInjkyGZl0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/121U_qJtkRxpIzd-b07rCsZu17WGWg3gLyyInjkyGZl0/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        160,
+        -380
+      ],
+      "id": "fda131a5-ee7d-45cb-bebc-7bb11dd3f7cc",
+      "name": "Google Sheets1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3OGuJIGonElYyMD2",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Gmail }}",
+        "subject": "ABOUT THE DEPARTMENT GPA STATUS",
+        "emailType": "text",
+        "message": "Dear ECE department heads, We have noticed a null% drop in GPA and an increase of 0 students at risk. We recommend implementing additional support measures to help these students improve their academic performance.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        220,
+        -80
+      ],
+      "id": "1ef5755e-c2bd-4094-818d-174f3fb165fb",
+      "name": "Gmail",
+      "webhookId": "4b2bf432-65c8-428e-8d04-92f787122ec2",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aySW1nQDJLbm3LXR",
+          "name": "Gmail account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Code2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code2": {
+      "main": [
+        [
+          {
+            "node": "Code3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code3": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets1": {
+      "main": [
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b0fd2d6d-af34-44af-b4d2-d978c81c2db5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "299c6cc38c51c64e286cbdd265908ac0421aa6a5a448e9a33f3b899deacaa5e5"
+  },
+  "id": "FX2ph5RQMS1TITpK",
+  "tags": []
+}
